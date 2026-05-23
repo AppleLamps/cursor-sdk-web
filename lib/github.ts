@@ -62,14 +62,15 @@ async function fetchFile(
   return Buffer.from(data.content, "base64").toString("utf-8");
 }
 
-export async function fetchSiteFiles(sessionId: string): Promise<SiteFiles | null> {
-  const token = process.env.GITHUB_TOKEN;
-  const repoUrl = process.env.TEMPLATE_REPO_URL;
-  const ref = process.env.TEMPLATE_REPO_REF ?? "main";
-
-  if (!token || !repoUrl) {
-    throw new Error("Missing GITHUB_TOKEN or TEMPLATE_REPO_URL");
-  }
+export async function fetchSiteFiles(
+  sessionId: string,
+  options: {
+    githubToken: string;
+    templateRepoUrl: string;
+    templateRepoRef: string;
+  },
+): Promise<SiteFiles | null> {
+  const { githubToken: token, templateRepoUrl: repoUrl, templateRepoRef: ref } = options;
 
   const { owner, repo } = parseRepoUrl(repoUrl);
   const base = `sites/${sessionId}`;

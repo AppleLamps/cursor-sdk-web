@@ -13,6 +13,7 @@ import {
   type TraceStep,
   type TraceStreamEvent,
 } from "@/lib/agent-trace";
+import { downloadExport, getAuthHeaders } from "@/lib/client-api";
 import { clampWidth, loadChatWidth, saveChatWidth } from "@/lib/panel-width";
 import { loadSession, resetSession, saveSession } from "@/lib/session";
 import styles from "./builder-app.module.css";
@@ -78,6 +79,7 @@ export function BuilderApp() {
   const [showDev, setShowDev] = useState(false);
   const [chatWidth, setChatWidth] = useState(360);
   const [liveTrace, setLiveTrace] = useState<TraceStep[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
   const chatWidthRef = useRef(chatWidth);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const traceRef = useRef<TraceStep[]>([]);
@@ -106,7 +108,9 @@ export function BuilderApp() {
 
   const refreshPreview = useCallback(async (sessionId: string) => {
     for (let attempt = 0; attempt < 8; attempt++) {
-      const res = await fetch(`/api/site/${sessionId}`);
+      const res = await fetch(`/api/site/${sessionId}`, {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = (await res.json()) as { previewHtml: string };
         setPreviewHtml(data.previewHtml);
@@ -137,7 +141,10 @@ export function BuilderApp() {
       try {
         const response = await fetch("/api/generate", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
           body: JSON.stringify({
             sessionId: session.sessionId,
             prompt,
@@ -271,6 +278,19 @@ export function BuilderApp() {
     [agentId, applyTrace, pushStream, refreshPreview, session],
   );
 
+  const handleExport = useCallback(async () => {
+    if (!canExport) return;
+    setIsExporting(true);
+    setError(null);
+    try {
+      await downloadExport(session.sessionId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  }, [canExport, session.sessionId]);
+
   const handleNewSite = () => {
     const next = resetSession();
     setSession(next);
@@ -331,7 +351,8 @@ export function BuilderApp() {
           widthMode={previewWidth}
           onWidthModeChange={setPreviewWidth}
           canExport={canExport}
-          exportUrl={`/api/export/${session.sessionId}`}
+          onExport={handleExport}
+          isExporting={isExporting}
           isLoading={isGenerating && !previewHtml}
           isRefreshing={isGenerating && Boolean(previewHtml)}
           onRefresh={() => refreshPreview(session.sessionId)}

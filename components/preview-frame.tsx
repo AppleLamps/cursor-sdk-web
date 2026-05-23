@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import styles from "./preview-frame.module.css";
 
 interface PreviewFrameProps {
@@ -8,11 +9,11 @@ interface PreviewFrameProps {
   widthMode: "desktop" | "mobile";
   onWidthModeChange: (mode: "desktop" | "mobile") => void;
   canExport: boolean;
-  exportUrl: string;
+  onExport?: () => void;
+  isExporting?: boolean;
   isLoading: boolean;
   isRefreshing?: boolean;
   onRefresh?: () => void;
-  onNewSite?: () => void;
   showDev?: boolean;
   onToggleDev?: () => void;
   sessionLabel?: string;
@@ -26,7 +27,8 @@ export function PreviewFrame({
   widthMode,
   onWidthModeChange,
   canExport,
-  exportUrl,
+  onExport,
+  isExporting,
   isLoading,
   isRefreshing,
   onRefresh,
@@ -36,8 +38,58 @@ export function PreviewFrame({
   agentId,
   runId,
 }: PreviewFrameProps) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [zoom, setZoom] = useState(100);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!html) {
+      setPreviewUrl(null);
+      return;
+    }
+
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [html, previewKey]);
+
+  const addressLabel = useMemo(() => {
+    if (!html) return "about:blank";
+    return `preview://site/${sessionLabel ?? "draft"}`;
+  }, [html, sessionLabel]);
+
+  const handleOpenTab = () => {
+    if (!previewUrl) return;
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const handleFullscreen = async () => {
+    const node = document.getElementById("preview-sandbox-root");
+    if (!node) return;
+
+    if (!document.fullscreenElement) {
+      await node.requestFullscreen?.();
+      setIsFullscreen(true);
+    } else {
+      await document.exitFullscreen?.();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, []);
+
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} id="preview-sandbox-root">
       <header className={styles.toolbar}>
         <div className={styles.toolbarLeft}>
           <span className={styles.toolbarLabel}>Preview</span>
@@ -55,6 +107,7 @@ export function PreviewFrame({
               type="button"
               className={widthMode === "desktop" ? styles.active : undefined}
               onClick={() => onWidthModeChange("desktop")}
+              title="Desktop"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -65,6 +118,7 @@ export function PreviewFrame({
               type="button"
               className={widthMode === "mobile" ? styles.active : undefined}
               onClick={() => onWidthModeChange("mobile")}
+              title="Mobile"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="5" y="2" width="14" height="20" rx="2" />
@@ -72,6 +126,28 @@ export function PreviewFrame({
               </svg>
             </button>
           </div>
+
+          {widthMode === "desktop" && html ? (
+            <div className={styles.zoomControl}>
+              <button
+                type="button"
+                className={styles.zoomBtn}
+                onClick={() => setZoom((z) => Math.max(50, z - 10))}
+                aria-label="Zoom out"
+              >
+                −
+              </button>
+              <span>{zoom}%</span>
+              <button
+                type="button"
+                className={styles.zoomBtn}
+                onClick={() => setZoom((z) => Math.min(100, z + 10))}
+                aria-label="Zoom in"
+              >
+                +
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <div className={styles.toolbarRight}>
@@ -81,10 +157,30 @@ export function PreviewFrame({
               className={styles.toolBtn}
               onClick={onRefresh}
               disabled={isLoading}
-              title="Refresh"
+              title="Refresh preview"
             >
               ↻
             </button>
+          ) : null}
+          {html ? (
+            <>
+              <button
+                type="button"
+                className={styles.toolBtn}
+                onClick={handleOpenTab}
+                title="Open in new tab"
+              >
+                ↗
+              </button>
+              <button
+                type="button"
+                className={styles.toolBtn}
+                onClick={handleFullscreen}
+                title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+              >
+                {isFullscreen ? "⤡" : "⤢"}
+              </button>
+            </>
           ) : null}
           {onToggleDev ? (
             <button
@@ -96,15 +192,16 @@ export function PreviewFrame({
               {"{}"}
             </button>
           ) : null}
-          <a
+          <button
+            type="button"
             className={canExport ? styles.exportBtn : styles.exportBtnDisabled}
-            href={canExport ? exportUrl : undefined}
-            onClick={(e) => {
-              if (!canExport) e.preventDefault();
+            onClick={() => {
+              if (canExport && onExport) onExport();
             }}
+            disabled={!canExport || isExporting}
           >
-            Export
-          </a>
+            {isExporting ? "Exporting…" : "Export"}
+          </button>
           <a
             className={styles.linkBtn}
             href="https://cursor.com/docs/sdk/typescript"
@@ -127,27 +224,50 @@ export function PreviewFrame({
       <div className={styles.canvas}>
         <div
           className={`${styles.frameWrap} ${widthMode === "mobile" ? styles.mobile : styles.desktop}`}
+          style={widthMode === "desktop" && html ? { transform: `scale(${zoom / 100})` } : undefined}
         >
-          {html ? (
-            <iframe
-              key={previewKey}
-              title="Preview"
-              sandbox="allow-scripts"
-              srcDoc={html}
-              className={`${styles.frame} ${isRefreshing ? styles.frameDim : ""}`}
-            />
+          {widthMode === "mobile" && html ? (
+            <div className={styles.mobileChrome}>
+              <span className={styles.mobileNotch} />
+              <span className={styles.mobileTime}>9:41</span>
+            </div>
+          ) : null}
+
+          {html && previewUrl ? (
+            <div className={styles.browserChrome}>
+              <div className={styles.trafficLights} aria-hidden>
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className={styles.addressBar}>{addressLabel}</div>
+            </div>
+          ) : null}
+
+          {html && previewUrl ? (
+            <div className={styles.frameHost}>
+              <iframe
+                key={previewKey}
+                title="Site preview"
+                sandbox="allow-scripts allow-forms allow-modals allow-popups"
+                src={previewUrl}
+                className={`${styles.frame} ${isRefreshing ? styles.frameDim : ""}`}
+              />
+              {isRefreshing ? <div className={styles.refreshOverlay} aria-hidden /> : null}
+            </div>
           ) : (
             <div className={styles.empty}>
               {isLoading ? (
                 <>
                   <div className={styles.loader} />
                   <p>Generating your site…</p>
+                  <span>The agent is writing HTML, CSS, and JS to your template repo.</span>
                 </>
               ) : (
                 <>
                   <div className={styles.emptyIcon} />
                   <p>Preview will appear here</p>
-                  <span>Send a message in the chat to get started</span>
+                  <span>Send a message in the chat to generate a site in the sandbox.</span>
                 </>
               )}
             </div>

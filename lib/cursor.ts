@@ -1,23 +1,19 @@
 import { Agent, type AgentOptions, CursorAgentError } from "@cursor/sdk";
+import type { ResolvedCredentials } from "@/lib/api-credentials";
 
-export function getAgentOptions(): AgentOptions {
-  const apiKey = process.env.CURSOR_API_KEY;
-  const repoUrl = process.env.TEMPLATE_REPO_URL;
-  const ref = process.env.TEMPLATE_REPO_REF ?? "main";
+export function getAgentOptions(credentials: ResolvedCredentials): AgentOptions {
   const modelId = process.env.CURSOR_MODEL ?? "composer-2.5";
 
-  if (!apiKey) {
-    throw new Error("Missing CURSOR_API_KEY");
-  }
-  if (!repoUrl) {
-    throw new Error("Missing TEMPLATE_REPO_URL");
-  }
-
   return {
-    apiKey,
+    apiKey: credentials.cursorApiKey,
     model: { id: modelId },
     cloud: {
-      repos: [{ url: repoUrl, startingRef: ref }],
+      repos: [
+        {
+          url: credentials.templateRepoUrl,
+          startingRef: credentials.templateRepoRef,
+        },
+      ],
       autoCreatePR: false,
       skipReviewerRequest: true,
     },
@@ -55,9 +51,10 @@ export function serializeSse(event: string, data: unknown): string {
 export async function runAgentGeneration(options: {
   prompt: string;
   agentId?: string;
+  credentials: ResolvedCredentials;
   onEvent: (payload: StreamEventPayload) => void;
 }): Promise<{ agentId: string; runId: string; status: string }> {
-  const agentOptions = getAgentOptions();
+  const agentOptions = getAgentOptions(options.credentials);
 
   await using agent = options.agentId
     ? await Agent.resume(options.agentId, agentOptions)

@@ -1,3 +1,4 @@
+import { missingCredentialsResponse, resolveCredentials } from "@/lib/api-credentials";
 import { CursorAgentError, runAgentGeneration, serializeSse } from "@/lib/cursor";
 import { buildAgentPrompt } from "@/lib/prompts";
 
@@ -28,6 +29,11 @@ export async function POST(request: Request) {
     );
   }
 
+  const credentials = resolveCredentials(request);
+  if (!credentials) {
+    return missingCredentialsResponse();
+  }
+
   const agentPrompt = buildAgentPrompt(sessionId.trim(), prompt.trim());
 
   const stream = new ReadableStream({
@@ -44,6 +50,7 @@ export async function POST(request: Request) {
         await runAgentGeneration({
           prompt: agentPrompt,
           agentId,
+          credentials,
           onEvent: (payload) => {
             if (payload.type === "log") {
               send("log", payload);

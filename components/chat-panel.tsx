@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { STARTER_PROMPTS } from "@/lib/prompts";
 import type { TraceStep } from "@/lib/agent-trace";
 import { AgentTrace } from "@/components/agent-trace";
@@ -47,9 +48,14 @@ export function ChatPanel({
           <span className={styles.logo} aria-hidden />
           <span className={styles.brandName}>Cursor SDK Web</span>
         </div>
-        <button type="button" className={styles.iconBtn} onClick={onNewSite} title="New site">
-          +
-        </button>
+        <div className={styles.topbarActions}>
+          <Link href="/onboarding" className={styles.iconBtn} title="API keys">
+            ⚙
+          </Link>
+          <button type="button" className={styles.iconBtn} onClick={onNewSite} title="New site">
+            +
+          </button>
+        </div>
       </header>
 
       <div className={styles.messages}>

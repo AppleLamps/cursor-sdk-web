@@ -1,3 +1,4 @@
+import { missingCredentialsResponse, resolveCredentials } from "@/lib/api-credentials";
 import { fetchSiteFiles } from "@/lib/github";
 import JSZip from "jszip";
 import { NextResponse } from "next/server";
@@ -5,7 +6,7 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ sessionId: string }> },
 ) {
   const { sessionId } = await context.params;
@@ -14,8 +15,17 @@ export async function GET(
     return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
   }
 
+  const credentials = resolveCredentials(request);
+  if (!credentials) {
+    return missingCredentialsResponse();
+  }
+
   try {
-    const files = await fetchSiteFiles(sessionId);
+    const files = await fetchSiteFiles(sessionId, {
+      githubToken: credentials.githubToken,
+      templateRepoUrl: credentials.templateRepoUrl,
+      templateRepoRef: credentials.templateRepoRef,
+    });
 
     if (!files) {
       return NextResponse.json({ error: "Site not found yet" }, { status: 404 });

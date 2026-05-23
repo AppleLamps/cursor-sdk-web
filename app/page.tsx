@@ -1,5 +1,5 @@
-import { BuilderApp } from "@/components/builder-app";
+import { CredentialsGate } from "@/components/credentials-gate";
 
 export default function HomePage() {
-  return <BuilderApp />;
+  return <CredentialsGate />;
 }

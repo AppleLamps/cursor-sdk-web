@@ -40,6 +40,12 @@
   text-overflow: ellipsis;
 }
 
+.topbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .iconBtn {
   width: 32px;
   height: 32px;
@@ -53,6 +59,7 @@
   display: grid;
   place-items: center;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
+  text-decoration: none;
 }
 
 .iconBtn:hover {
