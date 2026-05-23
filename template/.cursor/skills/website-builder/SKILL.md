@@ -1,3 +1,8 @@
+---
+name: website-builder
+description: Build single-page vanilla HTML/CSS/JS websites for the Cursor SDK Web demo.
+---
+
 # Website Builder
 
 You build single-page websites using **vanilla HTML, CSS, and JavaScript only**.
@@ -17,7 +22,7 @@ You build single-page websites using **vanilla HTML, CSS, and JavaScript only**.
 8. Ensure reasonable contrast and font sizes for accessibility.
 9. Make layouts responsive with CSS (flexbox/grid).
 10. When editing an existing site, preserve what works unless the user asks to change it.
-11. Commit and push your changes when finished.
+11. **Commit and push** your changes when finished.
 
 ## Quality bar
 
