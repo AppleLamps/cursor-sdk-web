@@ -1,0 +1,29 @@
+.handle {
+  flex-shrink: 0;
+  width: 10px;
+  margin: 0 -5px;
+  cursor: col-resize;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  z-index: 10;
+  position: relative;
+}
+
+.line {
+  width: 1px;
+  background: var(--border);
+  transition: background 0.15s ease, width 0.15s ease;
+}
+
+.handle:hover .line,
+.handle:active .line {
+  width: 2px;
+  background: var(--foreground);
+}
+
+@media (max-width: 768px) {
+  .handle {
+    display: none;
+  }
+}

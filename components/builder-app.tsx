@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatPanel, type ChatMessage } from "@/components/chat-panel";
 import { PreviewFrame } from "@/components/preview-frame";
+import { ResizeHandle } from "@/components/resize-handle";
 import { StreamPanel, type StreamEntry } from "@/components/stream-panel";
+import { clampWidth, loadChatWidth, saveChatWidth } from "@/lib/panel-width";
 import { loadSession, resetSession, saveSession } from "@/lib/session";
 import styles from "./builder-app.module.css";
 
@@ -66,9 +68,27 @@ export function BuilderApp() {
   const [error, setError] = useState<string | null>(null);
   const [showActivity, setShowActivity] = useState(false);
   const [showDev, setShowDev] = useState(false);
+  const [chatWidth, setChatWidth] = useState(360);
+  const chatWidthRef = useRef(chatWidth);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const canExport = Boolean(previewHtml) && !isGenerating;
+
+  useEffect(() => {
+    setChatWidth(loadChatWidth());
+  }, []);
+
+  useEffect(() => {
+    chatWidthRef.current = chatWidth;
+  }, [chatWidth]);
+
+  useEffect(() => {
+    const onWindowResize = () => {
+      setChatWidth((w) => clampWidth(w));
+    };
+    window.addEventListener("resize", onWindowResize);
+    return () => window.removeEventListener("resize", onWindowResize);
+  }, []);
 
   const pushStream = useCallback((entry: StreamEntry) => {
     setStreamEntries((prev) => [...prev.slice(-100), entry]);
@@ -206,7 +226,7 @@ export function BuilderApp() {
 
   return (
     <div className={styles.shell}>
-      <aside className={styles.chatColumn}>
+      <aside className={styles.chatColumn} style={{ width: chatWidth }}>
         <ChatPanel
           messages={messages}
           isGenerating={isGenerating}
@@ -227,6 +247,12 @@ export function BuilderApp() {
         ) : null}
       </aside>
 
+      <ResizeHandle
+        getWidth={() => chatWidthRef.current}
+        onResize={(w) => setChatWidth(clampWidth(w))}
+        onResizeEnd={(w) => saveChatWidth(clampWidth(w))}
+      />
+
       <main className={styles.playground}>
         <PreviewFrame
           html={previewHtml}
@@ -238,7 +264,6 @@ export function BuilderApp() {
           isLoading={isGenerating && !previewHtml}
           isRefreshing={isGenerating && Boolean(previewHtml)}
           onRefresh={() => refreshPreview(session.sessionId)}
-          onNewSite={handleNewSite}
           showDev={showDev}
           onToggleDev={() => setShowDev((v) => !v)}
           sessionLabel={sessionLabel}
