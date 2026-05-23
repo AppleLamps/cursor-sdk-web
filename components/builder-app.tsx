@@ -5,6 +5,14 @@ import { ChatPanel, type ChatMessage } from "@/components/chat-panel";
 import { PreviewFrame } from "@/components/preview-frame";
 import { ResizeHandle } from "@/components/resize-handle";
 import { StreamPanel, type StreamEntry } from "@/components/stream-panel";
+import {
+  applyTraceEvent,
+  createInitialTrace,
+  finalizeTrace,
+  formatToolLabel,
+  type TraceStep,
+  type TraceStreamEvent,
+} from "@/lib/agent-trace";
 import { clampWidth, loadChatWidth, saveChatWidth } from "@/lib/panel-width";
 import { loadSession, resetSession, saveSession } from "@/lib/session";
 import styles from "./builder-app.module.css";
@@ -69,8 +77,10 @@ export function BuilderApp() {
   const [showActivity, setShowActivity] = useState(false);
   const [showDev, setShowDev] = useState(false);
   const [chatWidth, setChatWidth] = useState(360);
+  const [liveTrace, setLiveTrace] = useState<TraceStep[]>([]);
   const chatWidthRef = useRef(chatWidth);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const traceRef = useRef<TraceStep[]>([]);
 
   const canExport = Boolean(previewHtml) && !isGenerating;
 
@@ -108,11 +118,18 @@ export function BuilderApp() {
     return false;
   }, []);
 
+  const applyTrace = useCallback((event: TraceStreamEvent) => {
+    traceRef.current = applyTraceEvent(traceRef.current, event);
+    setLiveTrace(traceRef.current);
+  }, []);
+
   const handleGenerate = useCallback(
     async (prompt: string) => {
       setError(null);
       setIsGenerating(true);
       setStreamEntries([]);
+      traceRef.current = createInitialTrace();
+      setLiveTrace(traceRef.current);
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
 
       pushStream({ kind: "info", text: "Connecting to Cursor cloud agent…" });
@@ -138,25 +155,49 @@ export function BuilderApp() {
         await readSse(response, (event, data) => {
           if (event === "log") {
             const payload = data as { message: string; level: string };
+            applyTrace({ type: "log", level: payload.level as "info" | "error", message: payload.message });
             pushStream({
               kind: payload.level === "error" ? "error" : "info",
               text: payload.message,
             });
+          } else if (event === "thinking") {
+            const payload = data as { text: string };
+            applyTrace({ type: "thinking", text: payload.text });
+            pushStream({ kind: "assistant", text: `[thinking] ${payload.text}` });
+          } else if (event === "task") {
+            const payload = data as { text: string };
+            applyTrace({ type: "task", text: payload.text });
+            pushStream({ kind: "status", text: payload.text });
           } else if (event === "assistant") {
             const payload = data as { text: string };
             assistantText += payload.text;
+            applyTrace({ type: "assistant", text: payload.text });
             pushStream({ kind: "assistant", text: payload.text });
           } else if (event === "tool") {
-            const payload = data as { name: string; status: string };
+            const payload = data as {
+              callId: string;
+              name: string;
+              status: string;
+              args?: unknown;
+            };
+            applyTrace({
+              type: "tool",
+              callId: payload.callId,
+              name: payload.name,
+              status: payload.status,
+              args: payload.args,
+            });
             pushStream({
               kind: "tool",
-              text: `${payload.name} → ${payload.status}`,
+              text: `${formatToolLabel(payload.name, payload.args)} → ${payload.status}`,
             });
           } else if (event === "status") {
             const payload = data as { status: string };
+            applyTrace({ type: "status", status: payload.status });
             pushStream({ kind: "status", text: payload.status });
           } else if (event === "done") {
             donePayload = data as DonePayload;
+            applyTrace({ type: "status", status: "FINISHED" });
             setAgentId(donePayload.agentId);
             setLastRunId(donePayload.runId);
             const nextSession = { ...session, agentId: donePayload.agentId };
@@ -169,22 +210,40 @@ export function BuilderApp() {
             if (donePayload.error) setError(donePayload.error);
           } else if (event === "error") {
             const payload = data as { message: string };
+            applyTrace({ type: "log", level: "error", message: payload.message });
             setError(payload.message);
             pushStream({ kind: "error", text: payload.message });
           }
         });
 
+        const savedTrace = finalizeTrace(traceRef.current);
+
         if (assistantText.trim()) {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: assistantText.trim() },
+            { role: "assistant", content: assistantText.trim(), trace: savedTrace },
           ]);
         } else if (donePayload?.status === "finished") {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: "Done — preview updated." },
+            {
+              role: "assistant",
+              content: "Done — preview updated.",
+              trace: savedTrace,
+            },
+          ]);
+        } else if (savedTrace.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              content: donePayload?.error ?? "Run finished.",
+              trace: savedTrace,
+            },
           ]);
         }
+
+        setLiveTrace([]);
 
         if (donePayload?.status === "finished") {
           const loaded = await refreshPreview(session.sessionId);
@@ -194,13 +253,22 @@ export function BuilderApp() {
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Generation failed";
+        applyTrace({ type: "log", level: "error", message });
         setError(message);
         pushStream({ kind: "error", text: message });
+        const savedTrace = finalizeTrace(traceRef.current);
+        if (savedTrace.length > 0) {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: message, trace: savedTrace },
+          ]);
+        }
+        setLiveTrace([]);
       } finally {
         setIsGenerating(false);
       }
     },
-    [agentId, pushStream, refreshPreview, session],
+    [agentId, applyTrace, pushStream, refreshPreview, session],
   );
 
   const handleNewSite = () => {
@@ -210,6 +278,8 @@ export function BuilderApp() {
     setLastRunId(undefined);
     setMessages([]);
     setStreamEntries([]);
+    setLiveTrace([]);
+    traceRef.current = [];
     setPreviewHtml("");
     setPreviewKey(0);
     setError(null);
@@ -217,7 +287,7 @@ export function BuilderApp() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isGenerating]);
+  }, [messages, isGenerating, liveTrace]);
 
   const sessionLabel = useMemo(
     () => session.sessionId.slice(0, 8),
@@ -230,6 +300,7 @@ export function BuilderApp() {
         <ChatPanel
           messages={messages}
           isGenerating={isGenerating}
+          liveTrace={liveTrace}
           error={error}
           onDismissError={() => setError(null)}
           onSubmit={handleGenerate}

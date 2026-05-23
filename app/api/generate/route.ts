@@ -47,6 +47,10 @@ export async function POST(request: Request) {
           onEvent: (payload) => {
             if (payload.type === "log") {
               send("log", payload);
+            } else if (payload.type === "thinking") {
+              send("thinking", payload);
+            } else if (payload.type === "task") {
+              send("task", payload);
             } else if (payload.type === "assistant") {
               send("assistant", payload);
             } else if (payload.type === "tool") {

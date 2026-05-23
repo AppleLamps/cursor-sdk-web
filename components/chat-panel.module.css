@@ -131,6 +131,18 @@
   word-break: break-word;
 }
 
+.messageBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.messageBlock:has(.msgUser) {
+  align-items: flex-end;
+}
+
 .msgUser {
   align-self: flex-end;
   padding: 10px 14px;

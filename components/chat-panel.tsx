@@ -1,16 +1,20 @@
 "use client";
 
 import { STARTER_PROMPTS } from "@/lib/prompts";
+import type { TraceStep } from "@/lib/agent-trace";
+import { AgentTrace } from "@/components/agent-trace";
 import styles from "./chat-panel.module.css";
 
 export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
+  trace?: TraceStep[];
 }
 
 interface ChatPanelProps {
   messages: ChatMessage[];
   isGenerating: boolean;
+  liveTrace?: TraceStep[];
   error?: string | null;
   onDismissError?: () => void;
   onSubmit: (prompt: string) => void;
@@ -24,6 +28,7 @@ interface ChatPanelProps {
 export function ChatPanel({
   messages,
   isGenerating,
+  liveTrace = [],
   error,
   onDismissError,
   onSubmit,
@@ -33,6 +38,8 @@ export function ChatPanel({
   onToggleActivity,
   activityCount = 0,
 }: ChatPanelProps) {
+  const showLiveTrace = isGenerating && liveTrace.length > 0;
+
   return (
     <div className={styles.shell}>
       <header className={styles.topbar}>
@@ -46,7 +53,7 @@ export function ChatPanel({
       </header>
 
       <div className={styles.messages}>
-        {messages.length === 0 ? (
+        {messages.length === 0 && !showLiveTrace ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>What do you want to build?</p>
             <p className={styles.emptySub}>
@@ -69,22 +76,20 @@ export function ChatPanel({
         ) : (
           <>
             {messages.map((message, index) => (
-              <div
-                key={`${message.role}-${index}`}
-                className={
-                  message.role === "user" ? styles.msgUser : styles.msgAssistant
-                }
-              >
-                {message.content}
+              <div key={`${message.role}-${index}`} className={styles.messageBlock}>
+                {message.role === "assistant" && message.trace && message.trace.length > 0 ? (
+                  <AgentTrace steps={message.trace} isLive={false} />
+                ) : null}
+                <div
+                  className={
+                    message.role === "user" ? styles.msgUser : styles.msgAssistant
+                  }
+                >
+                  {message.content}
+                </div>
               </div>
             ))}
-            {isGenerating ? (
-              <div className={styles.typing} aria-label="Agent working">
-                <span />
-                <span />
-                <span />
-              </div>
-            ) : null}
+            {showLiveTrace ? <AgentTrace steps={liveTrace} isLive /> : null}
           </>
         )}
         <div ref={messagesEndRef} />
@@ -108,7 +113,7 @@ export function ChatPanel({
             className={`${styles.activityBtn} ${showActivity ? styles.activityActive : ""}`}
             onClick={onToggleActivity}
           >
-            Activity
+            Raw stream
             {activityCount > 0 ? (
               <span className={styles.activityCount}>{activityCount}</span>
             ) : null}

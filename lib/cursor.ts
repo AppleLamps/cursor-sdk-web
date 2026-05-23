@@ -28,8 +28,16 @@ export { Agent, CursorAgentError };
 
 export type StreamEventPayload =
   | { type: "log"; level: "info" | "error"; message: string }
+  | { type: "thinking"; text: string }
+  | { type: "task"; text: string }
   | { type: "assistant"; text: string }
-  | { type: "tool"; name: string; status: string }
+  | {
+      type: "tool";
+      callId: string;
+      name: string;
+      status: string;
+      args?: unknown;
+    }
   | { type: "status"; status: string }
   | {
       type: "done";
@@ -77,11 +85,21 @@ export async function runAgentGeneration(options: {
             options.onEvent({ type: "assistant", text: block.text });
           }
         }
+      } else if (event.type === "thinking") {
+        if (event.text?.trim()) {
+          options.onEvent({ type: "thinking", text: event.text });
+        }
+      } else if (event.type === "task") {
+        if (event.text?.trim()) {
+          options.onEvent({ type: "task", text: event.text });
+        }
       } else if (event.type === "tool_call") {
         options.onEvent({
           type: "tool",
+          callId: event.call_id,
           name: event.name,
           status: event.status,
+          args: event.args,
         });
       } else if (event.type === "status") {
         options.onEvent({ type: "status", status: event.status });
