@@ -11,6 +11,7 @@ export interface StreamEntry {
 interface StreamPanelProps {
   entries: StreamEntry[];
   isLive?: boolean;
+  compact?: boolean;
 }
 
 const TAG_CLASS: Record<StreamEntry["kind"], string> = {
@@ -22,7 +23,7 @@ const TAG_CLASS: Record<StreamEntry["kind"], string> = {
   error: styles.tagError,
 };
 
-export function StreamPanel({ entries, isLive }: StreamPanelProps) {
+export function StreamPanel({ entries, isLive, compact }: StreamPanelProps) {
   const logRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -32,22 +33,18 @@ export function StreamPanel({ entries, isLive }: StreamPanelProps) {
   }, [entries]);
 
   return (
-    <div className={styles.shell}>
-      <div className={styles.header}>
-        <div>
+    <div className={`${styles.shell} ${compact ? styles.compact : ""}`}>
+      {!compact ? (
+        <div className={styles.header}>
           <h2>Agent stream</h2>
-          <p className={styles.sub}>run.stream() events</p>
+          <span className={isLive ? styles.liveOn : styles.liveOff}>
+            {isLive ? "Live" : "Idle"}
+          </span>
         </div>
-        <span className={`${styles.liveBadge} ${isLive ? styles.liveOn : ""}`}>
-          {isLive ? "● Live" : "Idle"}
-        </span>
-      </div>
+      ) : null}
       <div className={styles.log} ref={logRef}>
         {entries.length === 0 ? (
-          <div className={styles.empty}>
-            <code>run.stream()</code>
-            <p>Tool calls, status updates, and assistant output appear here in real time.</p>
-          </div>
+          <p className={styles.empty}>No activity yet</p>
         ) : (
           entries.map((entry, index) => (
             <div key={`${entry.kind}-${index}`} className={styles.line}>

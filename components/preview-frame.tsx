@@ -12,6 +12,12 @@ interface PreviewFrameProps {
   isLoading: boolean;
   isRefreshing?: boolean;
   onRefresh?: () => void;
+  onNewSite?: () => void;
+  showDev?: boolean;
+  onToggleDev?: () => void;
+  sessionLabel?: string;
+  agentId?: string;
+  runId?: string;
 }
 
 export function PreviewFrame({
@@ -24,102 +30,128 @@ export function PreviewFrame({
   isLoading,
   isRefreshing,
   onRefresh,
+  showDev,
+  onToggleDev,
+  sessionLabel,
+  agentId,
+  runId,
 }: PreviewFrameProps) {
   return (
     <div className={styles.shell}>
-      <div className={styles.toolbar}>
-        <div>
-          <h2>Preview</h2>
-          <p className={styles.sub}>Sandboxed iframe · vanilla output</p>
+      <header className={styles.toolbar}>
+        <div className={styles.toolbarLeft}>
+          <span className={styles.toolbarLabel}>Preview</span>
+          {isLoading || isRefreshing ? (
+            <span className={styles.buildingBadge}>
+              <span className={styles.buildingDot} />
+              Building
+            </span>
+          ) : null}
         </div>
-        <div className={styles.actions}>
-          <div className={styles.toggle}>
+
+        <div className={styles.toolbarCenter}>
+          <div className={styles.deviceToggle}>
             <button
               type="button"
               className={widthMode === "desktop" ? styles.active : undefined}
               onClick={() => onWidthModeChange("desktop")}
             >
-              Desktop
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <path d="M8 21h8M12 17v4" />
+              </svg>
             </button>
             <button
               type="button"
               className={widthMode === "mobile" ? styles.active : undefined}
               onClick={() => onWidthModeChange("mobile")}
             >
-              Mobile
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="5" y="2" width="14" height="20" rx="2" />
+                <path d="M12 18h.01" />
+              </svg>
             </button>
           </div>
+        </div>
+
+        <div className={styles.toolbarRight}>
           {onRefresh ? (
             <button
               type="button"
-              className={styles.refreshBtn}
+              className={styles.toolBtn}
               onClick={onRefresh}
               disabled={isLoading}
-              title="Refresh preview from GitHub"
+              title="Refresh"
             >
               ↻
             </button>
           ) : null}
+          {onToggleDev ? (
+            <button
+              type="button"
+              className={`${styles.toolBtn} ${showDev ? styles.toolBtnActive : ""}`}
+              onClick={onToggleDev}
+              title="SDK info"
+            >
+              {"{}"}
+            </button>
+          ) : null}
           <a
-            className={canExport ? styles.export : styles.exportDisabled}
+            className={canExport ? styles.exportBtn : styles.exportBtnDisabled}
             href={canExport ? exportUrl : undefined}
-            aria-disabled={!canExport}
             onClick={(e) => {
               if (!canExport) e.preventDefault();
             }}
           >
-            Download zip
+            Export
+          </a>
+          <a
+            className={styles.linkBtn}
+            href="https://cursor.com/docs/sdk/typescript"
+            target="_blank"
+            rel="noreferrer"
+          >
+            SDK
           </a>
         </div>
-      </div>
+      </header>
 
-      <div className={styles.stage}>
+      {showDev ? (
+        <div className={styles.devStrip}>
+          <span>session: {sessionLabel}</span>
+          <span>agent: {agentId ?? "—"}</span>
+          <span>run: {runId ?? "—"}</span>
+        </div>
+      ) : null}
+
+      <div className={styles.canvas}>
         <div
-          className={`${styles.device} ${widthMode === "mobile" ? styles.mobile : styles.desktop}`}
+          className={`${styles.frameWrap} ${widthMode === "mobile" ? styles.mobile : styles.desktop}`}
         >
-          <div className={styles.browserChrome}>
-            <div className={styles.traffic}>
-              <span />
-              <span />
-              <span />
+          {html ? (
+            <iframe
+              key={previewKey}
+              title="Preview"
+              sandbox="allow-scripts"
+              srcDoc={html}
+              className={`${styles.frame} ${isRefreshing ? styles.frameDim : ""}`}
+            />
+          ) : (
+            <div className={styles.empty}>
+              {isLoading ? (
+                <>
+                  <div className={styles.loader} />
+                  <p>Generating your site…</p>
+                </>
+              ) : (
+                <>
+                  <div className={styles.emptyIcon} />
+                  <p>Preview will appear here</p>
+                  <span>Send a message in the chat to get started</span>
+                </>
+              )}
             </div>
-            <div className={styles.urlBar}>your-site.local / index.html</div>
-          </div>
-
-          <div className={styles.viewport}>
-            {html ? (
-              <iframe
-                key={previewKey}
-                title="Generated site preview"
-                sandbox="allow-scripts"
-                srcDoc={html}
-                className={`${styles.frame} ${isRefreshing ? styles.frameRefreshing : ""}`}
-              />
-            ) : (
-              <div className={styles.placeholder}>
-                {isLoading ? (
-                  <>
-                    <div className={styles.skeleton}>
-                      <div className={styles.skeletonHero} />
-                      <div className={styles.skeletonLine} />
-                      <div className={styles.skeletonLineShort} />
-                      <div className={styles.skeletonGrid}>
-                        <span />
-                        <span />
-                        <span />
-                      </div>
-                    </div>
-                    <p className={styles.loadingText}>Agent is writing your site…</p>
-                  </>
-                ) : (
-                  <>
-                    <div className={styles.emptyPreview} aria-hidden />
-                    <p>Your preview appears here after the first build.</p>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>

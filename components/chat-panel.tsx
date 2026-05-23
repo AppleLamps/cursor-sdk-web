@@ -11,51 +11,57 @@ export interface ChatMessage {
 interface ChatPanelProps {
   messages: ChatMessage[];
   isGenerating: boolean;
+  error?: string | null;
+  onDismissError?: () => void;
   onSubmit: (prompt: string) => void;
+  onNewSite: () => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  showActivity?: boolean;
+  onToggleActivity?: () => void;
+  activityCount?: number;
 }
 
 export function ChatPanel({
   messages,
   isGenerating,
+  error,
+  onDismissError,
   onSubmit,
+  onNewSite,
   messagesEndRef,
+  showActivity,
+  onToggleActivity,
+  activityCount = 0,
 }: ChatPanelProps) {
   return (
     <div className={styles.shell}>
-      <div className={styles.header}>
-        <div>
-          <h2>Chat</h2>
-          <p className={styles.sub}>Multi-turn via Agent.resume</p>
+      <header className={styles.topbar}>
+        <div className={styles.brand}>
+          <span className={styles.logo} aria-hidden />
+          <span className={styles.brandName}>Cursor SDK Web</span>
         </div>
-        <span className={styles.badge}>
-          <span className={styles.badgeDot} aria-hidden />
-          Cloud Agent
-        </span>
-      </div>
+        <button type="button" className={styles.iconBtn} onClick={onNewSite} title="New site">
+          +
+        </button>
+      </header>
 
       <div className={styles.messages}>
         {messages.length === 0 ? (
           <div className={styles.empty}>
-            <div className={styles.emptyIcon} aria-hidden>
-              <span />
-              <span />
-              <span />
-            </div>
-            <h3>What should we build?</h3>
-            <p>Describe your site or pick a starter below.</p>
+            <p className={styles.emptyTitle}>What do you want to build?</p>
+            <p className={styles.emptySub}>
+              Describe a website and a Cursor cloud agent will generate vanilla HTML, CSS, and JS.
+            </p>
             <div className={styles.starters}>
-              {STARTER_PROMPTS.map((item, index) => (
+              {STARTER_PROMPTS.map((item) => (
                 <button
                   key={item.label}
                   type="button"
                   className={styles.starter}
-                  style={{ animationDelay: `${index * 60}ms` }}
                   disabled={isGenerating}
                   onClick={() => onSubmit(item.prompt)}
                 >
-                  <span className={styles.starterLabel}>{item.label}</span>
-                  <span className={styles.starterHint}>Tap to generate</span>
+                  {item.label}
                 </button>
               ))}
             </div>
@@ -65,36 +71,18 @@ export function ChatPanel({
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
-                className={styles.row}
-                style={{ animationDelay: `${Math.min(index * 40, 200)}ms` }}
+                className={
+                  message.role === "user" ? styles.msgUser : styles.msgAssistant
+                }
               >
-                <div
-                  className={
-                    message.role === "user" ? styles.avatarUser : styles.avatarAgent
-                  }
-                  aria-hidden
-                >
-                  {message.role === "user" ? "You" : "AI"}
-                </div>
-                <div
-                  className={
-                    message.role === "user" ? styles.userBubble : styles.assistantBubble
-                  }
-                >
-                  {message.content}
-                </div>
+                {message.content}
               </div>
             ))}
             {isGenerating ? (
-              <div className={styles.typingRow}>
-                <div className={styles.avatarAgent} aria-hidden>
-                  AI
-                </div>
-                <div className={styles.typingBubble} aria-label="Agent is working">
-                  <span />
-                  <span />
-                  <span />
-                </div>
+              <div className={styles.typing} aria-label="Agent working">
+                <span />
+                <span />
+                <span />
               </div>
             ) : null}
           </>
@@ -102,41 +90,67 @@ export function ChatPanel({
         <div ref={messagesEndRef} />
       </div>
 
-      <form
-        className={styles.form}
-        onSubmit={(e) => {
-          e.preventDefault();
-          const form = e.currentTarget;
-          const input = form.elements.namedItem("prompt") as HTMLInputElement;
-          const value = input.value.trim();
-          if (!value || isGenerating) return;
-          input.value = "";
-          onSubmit(value);
-        }}
-      >
-        <input
-          name="prompt"
-          placeholder={
-            isGenerating
-              ? "Agent is working…"
-              : messages.length
-                ? "Refine your site — e.g. “make the hero darker”"
-                : "Describe your website…"
-          }
-          disabled={isGenerating}
-          autoComplete="off"
-        />
-        <button type="submit" disabled={isGenerating} className={styles.sendBtn}>
-          {isGenerating ? (
-            <>
-              <span className={styles.btnSpinner} aria-hidden />
-              Building
-            </>
-          ) : (
-            "Send"
-          )}
-        </button>
-      </form>
+      {error ? (
+        <div className={styles.errorBar}>
+          <span>{error}</span>
+          {onDismissError ? (
+            <button type="button" onClick={onDismissError} aria-label="Dismiss">
+              ×
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      <footer className={styles.footer}>
+        {onToggleActivity ? (
+          <button
+            type="button"
+            className={`${styles.activityBtn} ${showActivity ? styles.activityActive : ""}`}
+            onClick={onToggleActivity}
+          >
+            Activity
+            {activityCount > 0 ? (
+              <span className={styles.activityCount}>{activityCount}</span>
+            ) : null}
+          </button>
+        ) : null}
+
+        <form
+          className={styles.form}
+          onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.currentTarget;
+            const input = form.elements.namedItem("prompt") as HTMLTextAreaElement;
+            const value = input.value.trim();
+            if (!value || isGenerating) return;
+            input.value = "";
+            input.style.height = "auto";
+            onSubmit(value);
+          }}
+        >
+          <textarea
+            name="prompt"
+            rows={1}
+            placeholder={isGenerating ? "Building…" : "Ask for changes…"}
+            disabled={isGenerating}
+            autoComplete="off"
+            onInput={(e) => {
+              const el = e.currentTarget;
+              el.style.height = "auto";
+              el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                e.currentTarget.form?.requestSubmit();
+              }
+            }}
+          />
+          <button type="submit" disabled={isGenerating} aria-label="Send">
+            {isGenerating ? <span className={styles.spinner} /> : "↑"}
+          </button>
+        </form>
+      </footer>
     </div>
   );
 }

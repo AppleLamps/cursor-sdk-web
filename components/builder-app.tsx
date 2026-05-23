@@ -2,10 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatPanel, type ChatMessage } from "@/components/chat-panel";
-import { DevPanel } from "@/components/dev-panel";
 import { PreviewFrame } from "@/components/preview-frame";
-import { SiteFooter } from "@/components/site-footer";
-import { StatusBar, type AgentPhase } from "@/components/status-bar";
 import { StreamPanel, type StreamEntry } from "@/components/stream-panel";
 import { loadSession, resetSession, saveSession } from "@/lib/session";
 import styles from "./builder-app.module.css";
@@ -56,18 +53,6 @@ async function readSse(
   }
 }
 
-function derivePhase(
-  isGenerating: boolean,
-  error: string | null,
-  previewHtml: string,
-  justFinished: boolean,
-): AgentPhase {
-  if (error) return "error";
-  if (isGenerating) return "building";
-  if (justFinished && previewHtml) return "ready";
-  return previewHtml ? "idle" : "idle";
-}
-
 export function BuilderApp() {
   const [session, setSession] = useState(loadSession);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -79,17 +64,11 @@ export function BuilderApp() {
   const [agentId, setAgentId] = useState<string | undefined>(session.agentId);
   const [lastRunId, setLastRunId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
+  const [showActivity, setShowActivity] = useState(false);
   const [showDev, setShowDev] = useState(false);
-  const [justFinished, setJustFinished] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canExport = Boolean(previewHtml) && !isGenerating;
-
-  const phase = useMemo(
-    () => derivePhase(isGenerating, error, previewHtml, justFinished),
-    [error, isGenerating, justFinished, previewHtml],
-  );
 
   const pushStream = useCallback((entry: StreamEntry) => {
     setStreamEntries((prev) => [...prev.slice(-100), entry]);
@@ -109,16 +88,9 @@ export function BuilderApp() {
     return false;
   }, []);
 
-  const markFinished = useCallback(() => {
-    setJustFinished(true);
-    if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
-    finishTimerRef.current = setTimeout(() => setJustFinished(false), 4000);
-  }, []);
-
   const handleGenerate = useCallback(
     async (prompt: string) => {
       setError(null);
-      setJustFinished(false);
       setIsGenerating(true);
       setStreamEntries([]);
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
@@ -172,11 +144,9 @@ export function BuilderApp() {
             saveSession(nextSession);
             pushStream({
               kind: donePayload.status === "finished" ? "success" : "error",
-              text: `Run ${donePayload.runId} finished: ${donePayload.status}`,
+              text: `Run finished: ${donePayload.status}`,
             });
-            if (donePayload.error) {
-              setError(donePayload.error);
-            }
+            if (donePayload.error) setError(donePayload.error);
           } else if (event === "error") {
             const payload = data as { message: string };
             setError(payload.message);
@@ -192,21 +162,14 @@ export function BuilderApp() {
         } else if (donePayload?.status === "finished") {
           setMessages((prev) => [
             ...prev,
-            {
-              role: "assistant",
-              content: "Done — your site files were updated. Check the preview.",
-            },
+            { role: "assistant", content: "Done — preview updated." },
           ]);
         }
 
         if (donePayload?.status === "finished") {
           const loaded = await refreshPreview(session.sessionId);
           if (!loaded) {
-            setError(
-              "Agent finished but preview files are not on GitHub yet. Check your template repo and token.",
-            );
-          } else {
-            markFinished();
+            setError("Preview not ready yet. Check template repo and GitHub token.");
           }
         }
       } catch (err) {
@@ -217,7 +180,7 @@ export function BuilderApp() {
         setIsGenerating(false);
       }
     },
-    [agentId, markFinished, pushStream, refreshPreview, session],
+    [agentId, pushStream, refreshPreview, session],
   );
 
   const handleNewSite = () => {
@@ -230,107 +193,59 @@ export function BuilderApp() {
     setPreviewHtml("");
     setPreviewKey(0);
     setError(null);
-    setJustFinished(false);
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isGenerating]);
 
-  useEffect(() => {
-    return () => {
-      if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
-    };
-  }, []);
-
   const sessionLabel = useMemo(
-    () => `${session.sessionId.slice(0, 8)}…`,
+    () => session.sessionId.slice(0, 8),
     [session.sessionId],
   );
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <div className={styles.hero}>
-          <div className={styles.logoMark} aria-hidden>
-            <span />
-            <span />
-            <span />
+    <div className={styles.shell}>
+      <aside className={styles.chatColumn}>
+        <ChatPanel
+          messages={messages}
+          isGenerating={isGenerating}
+          error={error}
+          onDismissError={() => setError(null)}
+          onSubmit={handleGenerate}
+          onNewSite={handleNewSite}
+          messagesEndRef={messagesEndRef}
+          showActivity={showActivity}
+          onToggleActivity={() => setShowActivity((v) => !v)}
+          activityCount={streamEntries.length}
+        />
+
+        {showActivity ? (
+          <div className={styles.activityDrawer}>
+            <StreamPanel entries={streamEntries} isLive={isGenerating} compact />
           </div>
-          <div>
-            <p className={styles.eyebrow}>Cursor SDK showcase</p>
-            <h1 className={styles.title}>Describe a site. Export the code.</h1>
-            <p className={styles.lede}>
-              A cloud agent builds vanilla HTML, CSS, and JavaScript in an isolated
-              sandbox — the same runtime that powers Cursor&apos;s programmatic agents.
-            </p>
-            <ul className={styles.pills}>
-              <li>Cloud VM sandbox</li>
-              <li>Live streaming</li>
-              <li>Multi-turn edits</li>
-              <li>Zip export</li>
-            </ul>
-          </div>
-        </div>
-        <div className={styles.headerActions}>
-          <button type="button" className={styles.secondaryBtn} onClick={handleNewSite}>
-            New site
-          </button>
-          <a
-            className={styles.secondaryBtn}
-            href="https://cursor.com/docs/sdk/typescript"
-            target="_blank"
-            rel="noreferrer"
-          >
-            SDK docs
-          </a>
-        </div>
-      </header>
+        ) : null}
+      </aside>
 
-      <StatusBar
-        phase={phase}
-        hasPreview={Boolean(previewHtml)}
-        error={error}
-        onDismissError={() => setError(null)}
-      />
-
-      <div className={styles.grid}>
-        <section className={styles.panel}>
-          <ChatPanel
-            messages={messages}
-            isGenerating={isGenerating}
-            onSubmit={handleGenerate}
-            messagesEndRef={messagesEndRef}
-          />
-        </section>
-
-        <section className={styles.panel}>
-          <PreviewFrame
-            html={previewHtml}
-            previewKey={previewKey}
-            widthMode={previewWidth}
-            onWidthModeChange={setPreviewWidth}
-            canExport={canExport}
-            exportUrl={`/api/export/${session.sessionId}`}
-            isLoading={isGenerating && !previewHtml}
-            isRefreshing={isGenerating && Boolean(previewHtml)}
-            onRefresh={() => refreshPreview(session.sessionId)}
-          />
-        </section>
-      </div>
-
-      <div className={styles.lower}>
-        <StreamPanel entries={streamEntries} isLive={isGenerating} />
-        <DevPanel
-          open={showDev}
-          onToggle={() => setShowDev((v) => !v)}
-          sessionId={sessionLabel}
+      <main className={styles.playground}>
+        <PreviewFrame
+          html={previewHtml}
+          previewKey={previewKey}
+          widthMode={previewWidth}
+          onWidthModeChange={setPreviewWidth}
+          canExport={canExport}
+          exportUrl={`/api/export/${session.sessionId}`}
+          isLoading={isGenerating && !previewHtml}
+          isRefreshing={isGenerating && Boolean(previewHtml)}
+          onRefresh={() => refreshPreview(session.sessionId)}
+          onNewSite={handleNewSite}
+          showDev={showDev}
+          onToggleDev={() => setShowDev((v) => !v)}
+          sessionLabel={sessionLabel}
           agentId={agentId}
           runId={lastRunId}
         />
-      </div>
-
-      <SiteFooter />
+      </main>
     </div>
   );
 }

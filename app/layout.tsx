@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
-import { DM_Sans, Fraunces } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
-const sans = DM_Sans({
+const inter = Inter({
   subsets: ["latin"],
   variable: "--font-sans",
 });
 
-const display = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-display",
-});
-
 export const metadata: Metadata = {
-  title: "Cursor SDK Web — AI Website Builder Demo",
-  description:
-    "Describe a website in plain language. A Cursor cloud agent builds vanilla HTML, CSS, and JS you can export.",
+  title: "Cursor SDK Web",
+  description: "Build and export vanilla websites with the Cursor SDK",
 };
 
 export default function RootLayout({
@@ -24,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${sans.variable} ${display.variable}`}>{children}</body>
+    <html lang="en" className={inter.variable}>
+      <body>{children}</body>
     </html>
   );
 }
