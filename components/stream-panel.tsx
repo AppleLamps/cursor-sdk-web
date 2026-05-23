@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import styles from "./stream-panel.module.css";
 
 export interface StreamEntry {
@@ -9,6 +10,7 @@ export interface StreamEntry {
 
 interface StreamPanelProps {
   entries: StreamEntry[];
+  isLive?: boolean;
 }
 
 const TAG_CLASS: Record<StreamEntry["kind"], string> = {
@@ -20,21 +22,37 @@ const TAG_CLASS: Record<StreamEntry["kind"], string> = {
   error: styles.tagError,
 };
 
-export function StreamPanel({ entries }: StreamPanelProps) {
+export function StreamPanel({ entries, isLive }: StreamPanelProps) {
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = logRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [entries]);
+
   return (
     <div className={styles.shell}>
       <div className={styles.header}>
-        <h2>Agent stream</h2>
-        <span>Live SDK events</span>
+        <div>
+          <h2>Agent stream</h2>
+          <p className={styles.sub}>run.stream() events</p>
+        </div>
+        <span className={`${styles.liveBadge} ${isLive ? styles.liveOn : ""}`}>
+          {isLive ? "● Live" : "Idle"}
+        </span>
       </div>
-      <div className={styles.log}>
+      <div className={styles.log} ref={logRef}>
         {entries.length === 0 ? (
-          <p className={styles.empty}>Stream output from `run.stream()` appears here.</p>
+          <div className={styles.empty}>
+            <code>run.stream()</code>
+            <p>Tool calls, status updates, and assistant output appear here in real time.</p>
+          </div>
         ) : (
           entries.map((entry, index) => (
             <div key={`${entry.kind}-${index}`} className={styles.line}>
               <span className={TAG_CLASS[entry.kind]}>{entry.kind}</span>
-              <span>{entry.text}</span>
+              <span className={styles.text}>{entry.text}</span>
             </div>
           ))
         )}

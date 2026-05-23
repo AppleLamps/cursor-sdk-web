@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatPanel, type ChatMessage } from "@/components/chat-panel";
 import { DevPanel } from "@/components/dev-panel";
 import { PreviewFrame } from "@/components/preview-frame";
+import { SiteFooter } from "@/components/site-footer";
+import { StatusBar, type AgentPhase } from "@/components/status-bar";
 import { StreamPanel, type StreamEntry } from "@/components/stream-panel";
 import { loadSession, resetSession, saveSession } from "@/lib/session";
 import styles from "./builder-app.module.css";
@@ -54,23 +56,43 @@ async function readSse(
   }
 }
 
+function derivePhase(
+  isGenerating: boolean,
+  error: string | null,
+  previewHtml: string,
+  justFinished: boolean,
+): AgentPhase {
+  if (error) return "error";
+  if (isGenerating) return "building";
+  if (justFinished && previewHtml) return "ready";
+  return previewHtml ? "idle" : "idle";
+}
+
 export function BuilderApp() {
   const [session, setSession] = useState(loadSession);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [streamEntries, setStreamEntries] = useState<StreamEntry[]>([]);
   const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [previewKey, setPreviewKey] = useState(0);
   const [previewWidth, setPreviewWidth] = useState<"desktop" | "mobile">("desktop");
   const [isGenerating, setIsGenerating] = useState(false);
   const [agentId, setAgentId] = useState<string | undefined>(session.agentId);
   const [lastRunId, setLastRunId] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
   const [showDev, setShowDev] = useState(false);
+  const [justFinished, setJustFinished] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canExport = Boolean(previewHtml) && !isGenerating;
 
+  const phase = useMemo(
+    () => derivePhase(isGenerating, error, previewHtml, justFinished),
+    [error, isGenerating, justFinished, previewHtml],
+  );
+
   const pushStream = useCallback((entry: StreamEntry) => {
-    setStreamEntries((prev) => [...prev.slice(-80), entry]);
+    setStreamEntries((prev) => [...prev.slice(-100), entry]);
   }, []);
 
   const refreshPreview = useCallback(async (sessionId: string) => {
@@ -79,6 +101,7 @@ export function BuilderApp() {
       if (res.ok) {
         const data = (await res.json()) as { previewHtml: string };
         setPreviewHtml(data.previewHtml);
+        setPreviewKey((k) => k + 1);
         return true;
       }
       await new Promise((r) => setTimeout(r, 2000 + attempt * 1000));
@@ -86,9 +109,16 @@ export function BuilderApp() {
     return false;
   }, []);
 
+  const markFinished = useCallback(() => {
+    setJustFinished(true);
+    if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
+    finishTimerRef.current = setTimeout(() => setJustFinished(false), 4000);
+  }, []);
+
   const handleGenerate = useCallback(
     async (prompt: string) => {
       setError(null);
+      setJustFinished(false);
       setIsGenerating(true);
       setStreamEntries([]);
       setMessages((prev) => [...prev, { role: "user", content: prompt }]);
@@ -164,7 +194,7 @@ export function BuilderApp() {
             ...prev,
             {
               role: "assistant",
-              content: "Site updated. Refreshing preview…",
+              content: "Done — your site files were updated. Check the preview.",
             },
           ]);
         }
@@ -175,6 +205,8 @@ export function BuilderApp() {
             setError(
               "Agent finished but preview files are not on GitHub yet. Check your template repo and token.",
             );
+          } else {
+            markFinished();
           }
         }
       } catch (err) {
@@ -185,7 +217,7 @@ export function BuilderApp() {
         setIsGenerating(false);
       }
     },
-    [agentId, pushStream, refreshPreview, session],
+    [agentId, markFinished, pushStream, refreshPreview, session],
   );
 
   const handleNewSite = () => {
@@ -196,12 +228,20 @@ export function BuilderApp() {
     setMessages([]);
     setStreamEntries([]);
     setPreviewHtml("");
+    setPreviewKey(0);
     setError(null);
+    setJustFinished(false);
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isGenerating]);
+
+  useEffect(() => {
+    return () => {
+      if (finishTimerRef.current) clearTimeout(finishTimerRef.current);
+    };
+  }, []);
 
   const sessionLabel = useMemo(
     () => `${session.sessionId.slice(0, 8)}…`,
@@ -211,13 +251,26 @@ export function BuilderApp() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div>
-          <p className={styles.eyebrow}>Cursor SDK showcase</p>
-          <h1 className={styles.title}>Describe a site. Export the code.</h1>
-          <p className={styles.lede}>
-            A cloud agent builds vanilla HTML, CSS, and JavaScript in an isolated
-            sandbox. No frameworks. No lock-in.
-          </p>
+        <div className={styles.hero}>
+          <div className={styles.logoMark} aria-hidden>
+            <span />
+            <span />
+            <span />
+          </div>
+          <div>
+            <p className={styles.eyebrow}>Cursor SDK showcase</p>
+            <h1 className={styles.title}>Describe a site. Export the code.</h1>
+            <p className={styles.lede}>
+              A cloud agent builds vanilla HTML, CSS, and JavaScript in an isolated
+              sandbox — the same runtime that powers Cursor&apos;s programmatic agents.
+            </p>
+            <ul className={styles.pills}>
+              <li>Cloud VM sandbox</li>
+              <li>Live streaming</li>
+              <li>Multi-turn edits</li>
+              <li>Zip export</li>
+            </ul>
+          </div>
         </div>
         <div className={styles.headerActions}>
           <button type="button" className={styles.secondaryBtn} onClick={handleNewSite}>
@@ -234,6 +287,13 @@ export function BuilderApp() {
         </div>
       </header>
 
+      <StatusBar
+        phase={phase}
+        hasPreview={Boolean(previewHtml)}
+        error={error}
+        onDismissError={() => setError(null)}
+      />
+
       <div className={styles.grid}>
         <section className={styles.panel}>
           <ChatPanel
@@ -242,23 +302,25 @@ export function BuilderApp() {
             onSubmit={handleGenerate}
             messagesEndRef={messagesEndRef}
           />
-          {error ? <p className={styles.error}>{error}</p> : null}
         </section>
 
         <section className={styles.panel}>
           <PreviewFrame
             html={previewHtml}
+            previewKey={previewKey}
             widthMode={previewWidth}
             onWidthModeChange={setPreviewWidth}
             canExport={canExport}
             exportUrl={`/api/export/${session.sessionId}`}
             isLoading={isGenerating && !previewHtml}
+            isRefreshing={isGenerating && Boolean(previewHtml)}
+            onRefresh={() => refreshPreview(session.sessionId)}
           />
         </section>
       </div>
 
       <div className={styles.lower}>
-        <StreamPanel entries={streamEntries} />
+        <StreamPanel entries={streamEntries} isLive={isGenerating} />
         <DevPanel
           open={showDev}
           onToggle={() => setShowDev((v) => !v)}
@@ -267,6 +329,8 @@ export function BuilderApp() {
           runId={lastRunId}
         />
       </div>
+
+      <SiteFooter />
     </div>
   );
 }

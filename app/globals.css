@@ -1,14 +1,18 @@
 :root {
-  --bg: #f4f0e8;
+  --bg: #f0ebe1;
   --bg-elevated: #fffdf8;
-  --ink: #1a1714;
-  --ink-muted: #5c564e;
-  --accent: #c45c26;
-  --accent-soft: #f3ddd0;
-  --line: #ddd4c4;
-  --success: #2f6b4f;
-  --shadow: 0 18px 50px rgba(26, 23, 20, 0.08);
-  --radius: 18px;
+  --ink: #14110e;
+  --ink-muted: #5e574e;
+  --accent: #b84e1a;
+  --accent-hover: #9a4015;
+  --accent-soft: #f4e0d4;
+  --line: #d9cfc0;
+  --success: #2a6348;
+  --success-soft: #dceee4;
+  --shadow: 0 20px 60px rgba(20, 17, 14, 0.09);
+  --shadow-sm: 0 8px 24px rgba(20, 17, 14, 0.06);
+  --radius: 20px;
+  --radius-sm: 12px;
   --font-sans: "DM Sans", system-ui, sans-serif;
   --font-display: "Fraunces", Georgia, serif;
 }
@@ -17,15 +21,30 @@
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html,
 body {
   margin: 0;
   min-height: 100%;
-  background:
-    radial-gradient(circle at top left, rgba(196, 92, 38, 0.12), transparent 28%),
-    linear-gradient(180deg, #f7f3eb 0%, var(--bg) 100%);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(rgba(20, 17, 14, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(20, 17, 14, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 12% 0%, rgba(184, 78, 26, 0.14), transparent 34%),
+    radial-gradient(circle at 88% 8%, rgba(42, 99, 72, 0.08), transparent 28%),
+    linear-gradient(180deg, #f7f2e8 0%, var(--bg) 100%);
+  background-size:
+    28px 28px,
+    28px 28px,
+    auto,
+    auto,
+    auto;
   color: var(--ink);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -38,6 +57,33 @@ a {
   color: var(--accent);
 }
 
+button:focus-visible,
+input:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 ::selection {
   background: var(--accent-soft);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

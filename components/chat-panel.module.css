@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 560px;
+  min-height: 580px;
   background: var(--bg-elevated);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -14,121 +14,323 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 18px 20px;
   border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, #fffdf8, #faf6ef);
 }
 
 .header h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.sub {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--ink-muted);
 }
 
 .badge {
-  font-size: 0.75rem;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.74rem;
+  padding: 6px 11px;
   border-radius: 999px;
   background: var(--accent-soft);
   color: var(--accent);
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.badgeDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 
 .messages {
   flex: 1;
   overflow: auto;
-  padding: 18px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(184, 78, 26, 0.04), transparent 40%),
+    #fffdf8;
 }
 
 .empty {
+  margin: auto 0;
+  text-align: center;
+  padding: 12px 8px 24px;
   color: var(--ink-muted);
 }
 
+.emptyIcon {
+  width: 56px;
+  height: 42px;
+  margin: 0 auto 16px;
+  border: 2px solid var(--line);
+  border-radius: 8px 8px 4px 4px;
+  position: relative;
+  background: white;
+}
+
+.emptyIcon span:nth-child(1) {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent-soft);
+}
+
+.emptyIcon span:nth-child(2) {
+  position: absolute;
+  top: 20px;
+  left: 8px;
+  width: 40%;
+  height: 4px;
+  border-radius: 2px;
+  background: #ebe3d8;
+}
+
+.emptyIcon span:nth-child(3) {
+  position: absolute;
+  top: 28px;
+  left: 8px;
+  width: 60%;
+  height: 4px;
+  border-radius: 2px;
+  background: #ebe3d8;
+}
+
+.empty h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  color: var(--ink);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
 .empty p {
-  margin-top: 0;
+  margin: 0 0 18px;
 }
 
 .starters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .starter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   border: 1px solid var(--line);
-  background: #fff;
-  border-radius: 999px;
-  padding: 8px 12px;
+  background: white;
+  border-radius: 14px;
+  padding: 12px 14px;
   cursor: pointer;
+  text-align: left;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+  animation: fadeUp 0.45s ease both;
 }
 
 .starter:hover:not(:disabled) {
+  transform: translateY(-2px);
   border-color: var(--accent);
-  color: var(--accent);
+  box-shadow: var(--shadow-sm);
 }
 
 .starter:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
+.starterLabel {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.starterHint {
+  font-size: 0.72rem;
+  color: var(--ink-muted);
+}
+
+.row,
+.typingRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  animation: fadeUp 0.35s ease both;
+}
+
+.avatarUser,
+.avatarAgent {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.avatarUser {
+  background: var(--ink);
+  color: white;
+}
+
+.avatarAgent {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid #e8c9b8;
+}
+
 .userBubble,
-.assistantBubble {
-  max-width: 92%;
+.assistantBubble,
+.typingBubble {
+  max-width: calc(100% - 44px);
   padding: 12px 14px;
   border-radius: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
   white-space: pre-wrap;
+  font-size: 0.94rem;
 }
 
 .userBubble {
-  align-self: flex-end;
   background: var(--ink);
   color: #fff;
   border-bottom-right-radius: 6px;
 }
 
 .assistantBubble {
-  align-self: flex-start;
-  background: #f7efe4;
+  background: white;
   border: 1px solid var(--line);
   border-bottom-left-radius: 6px;
+}
+
+.typingBubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: white;
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 6px;
+  min-height: 44px;
+}
+
+.typingBubble span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: bounce 1.2s ease-in-out infinite;
+}
+
+.typingBubble span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typingBubble span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes bounce {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+  40% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
 }
 
 .form {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 10px;
-  padding: 14px;
+  padding: 16px;
   border-top: 1px solid var(--line);
   background: #fff;
 }
 
 .form input {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  padding: 13px 14px;
   outline: none;
+  background: #fffdf8;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .form input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(196, 92, 38, 0.15);
+  box-shadow: 0 0 0 3px rgba(184, 78, 26, 0.12);
 }
 
-.form button {
+.sendBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   padding: 0 18px;
+  min-width: 108px;
+  justify-content: center;
   background: var(--accent);
   color: white;
   font-weight: 700;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
-.form button:disabled {
-  opacity: 0.65;
+.sendBtn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.sendBtn:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
+}
+
+.btnSpinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 560px) {
+  .starters {
+    grid-template-columns: 1fr;
+  }
 }
