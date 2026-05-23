@@ -107,8 +107,14 @@ export function OnboardingPage() {
               <h2>Cursor API key</h2>
               <p>
                 Used to run cloud agents. Get one from{" "}
-                <a href="https://cursor.com/settings" target="_blank" rel="noreferrer">
-                  Cursor Settings
+                <a
+                  href="https://cursor.com/settings"
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.externalLink}
+                  aria-label="Cursor Settings (opens in new tab)"
+                >
+                  Cursor Settings<span aria-hidden> ↗</span>
                 </a>
                 .
               </p>
@@ -128,6 +134,7 @@ export function OnboardingPage() {
                 type="button"
                 className={styles.revealBtn}
                 onClick={() => setShowCursorKey((v) => !v)}
+                aria-label={showCursorKey ? "Hide API key" : "Show API key"}
               >
                 {showCursorKey ? "Hide" : "Show"}
               </button>
@@ -147,8 +154,10 @@ export function OnboardingPage() {
                   href="https://github.com/settings/tokens"
                   target="_blank"
                   rel="noreferrer"
+                  className={styles.externalLink}
+                  aria-label="GitHub token settings (opens in new tab)"
                 >
-                  GitHub
+                  GitHub<span aria-hidden> ↗</span>
                 </a>
                 .
               </p>
@@ -168,6 +177,7 @@ export function OnboardingPage() {
                 type="button"
                 className={styles.revealBtn}
                 onClick={() => setShowGithubToken((v) => !v)}
+                aria-label={showGithubToken ? "Hide GitHub token" : "Show GitHub token"}
               >
                 {showGithubToken ? "Hide" : "Show"}
               </button>
@@ -187,8 +197,10 @@ export function OnboardingPage() {
                   href={DEFAULT_TEMPLATE_REPO_URL}
                   target="_blank"
                   rel="noreferrer"
+                  className={styles.externalLink}
+                  aria-label="cursor-sdk-web-template repository (opens in new tab)"
                 >
-                  cursor-sdk-web-template
+                  cursor-sdk-web-template<span aria-hidden> ↗</span>
                 </a>{" "}
                 and connect it to your Cursor account.
               </p>
@@ -216,6 +228,8 @@ export function OnboardingPage() {
 
         {verifyMessage ? (
           <div
+            role="alert"
+            aria-live="polite"
             className={
               verifyState === "success" ? styles.verifySuccess : styles.verifyError
             }

@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import styles from "./stream-panel.module.css";
 
 export interface StreamEntry {
+  id: string;
   kind: "info" | "assistant" | "tool" | "status" | "success" | "error";
   text: string;
 }
@@ -46,8 +47,8 @@ export function StreamPanel({ entries, isLive, compact }: StreamPanelProps) {
         {entries.length === 0 ? (
           <p className={styles.empty}>No activity yet</p>
         ) : (
-          entries.map((entry, index) => (
-            <div key={`${entry.kind}-${index}`} className={styles.line}>
+          entries.map((entry) => (
+            <div key={entry.id} className={styles.line}>
               <span className={TAG_CLASS[entry.kind]}>{entry.kind}</span>
               <span className={styles.text}>{entry.text}</span>
             </div>

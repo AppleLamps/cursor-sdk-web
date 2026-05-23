@@ -82,7 +82,12 @@ export function BuilderApp() {
   const [isExporting, setIsExporting] = useState(false);
   const chatWidthRef = useRef(chatWidth);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef(true);
   const traceRef = useRef<TraceStep[]>([]);
+
+  const createMessageId = () => crypto.randomUUID();
+  const createStreamEntryId = () => crypto.randomUUID();
 
   const canExport = Boolean(previewHtml) && !isGenerating;
 
@@ -102,8 +107,8 @@ export function BuilderApp() {
     return () => window.removeEventListener("resize", onWindowResize);
   }, []);
 
-  const pushStream = useCallback((entry: StreamEntry) => {
-    setStreamEntries((prev) => [...prev.slice(-100), entry]);
+  const pushStream = useCallback((entry: Omit<StreamEntry, "id">) => {
+    setStreamEntries((prev) => [...prev.slice(-100), { ...entry, id: createStreamEntryId() }]);
   }, []);
 
   const refreshPreview = useCallback(async (sessionId: string) => {
@@ -134,7 +139,7 @@ export function BuilderApp() {
       setStreamEntries([]);
       traceRef.current = createInitialTrace();
       setLiveTrace(traceRef.current);
-      setMessages((prev) => [...prev, { role: "user", content: prompt }]);
+      setMessages((prev) => [...prev, { id: createMessageId(), role: "user", content: prompt }]);
 
       pushStream({ kind: "info", text: "Connecting to Cursor cloud agent…" });
 
@@ -228,12 +233,18 @@ export function BuilderApp() {
         if (assistantText.trim()) {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: assistantText.trim(), trace: savedTrace },
+            {
+              id: createMessageId(),
+              role: "assistant",
+              content: assistantText.trim(),
+              trace: savedTrace,
+            },
           ]);
         } else if (donePayload?.status === "finished") {
           setMessages((prev) => [
             ...prev,
             {
+              id: createMessageId(),
               role: "assistant",
               content: "Done — preview updated.",
               trace: savedTrace,
@@ -243,6 +254,7 @@ export function BuilderApp() {
           setMessages((prev) => [
             ...prev,
             {
+              id: createMessageId(),
               role: "assistant",
               content: donePayload?.error ?? "Run finished.",
               trace: savedTrace,
@@ -267,7 +279,7 @@ export function BuilderApp() {
         if (savedTrace.length > 0) {
           setMessages((prev) => [
             ...prev,
-            { role: "assistant", content: message, trace: savedTrace },
+            { id: createMessageId(), role: "assistant", content: message, trace: savedTrace },
           ]);
         }
         setLiveTrace([]);
@@ -292,6 +304,11 @@ export function BuilderApp() {
   }, [canExport, session.sessionId]);
 
   const handleNewSite = () => {
+    const hasWork = messages.length > 0 || Boolean(previewHtml);
+    if (hasWork && !window.confirm("Start a new site? Current conversation and preview will be lost.")) {
+      return;
+    }
+
     const next = resetSession();
     setSession(next);
     setAgentId(undefined);
@@ -305,8 +322,16 @@ export function BuilderApp() {
     setError(null);
   };
 
+  const handleMessagesScroll = useCallback(() => {
+    const el = messagesContainerRef.current;
+    if (!el) return;
+    isNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  }, []);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (isNearBottomRef.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages, isGenerating, liveTrace]);
 
   const sessionLabel = useMemo(
@@ -316,7 +341,11 @@ export function BuilderApp() {
 
   return (
     <div className={styles.shell}>
-      <aside className={styles.chatColumn} style={{ width: chatWidth }}>
+      <aside
+        className={styles.chatColumn}
+        style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties}
+        aria-label="Chat panel"
+      >
         <ChatPanel
           messages={messages}
           isGenerating={isGenerating}
@@ -326,6 +355,8 @@ export function BuilderApp() {
           onSubmit={handleGenerate}
           onNewSite={handleNewSite}
           messagesEndRef={messagesEndRef}
+          messagesContainerRef={messagesContainerRef}
+          onMessagesScroll={handleMessagesScroll}
           showActivity={showActivity}
           onToggleActivity={() => setShowActivity((v) => !v)}
           activityCount={streamEntries.length}

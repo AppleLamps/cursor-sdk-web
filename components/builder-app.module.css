@@ -14,6 +14,7 @@
   border-right: none;
   min-height: 0;
   min-width: 0;
+  width: var(--chat-width, 360px);
 }
 
 .activityDrawer {
@@ -39,8 +40,10 @@
   }
 
   .chatColumn {
-    width: 100% !important;
-    flex: 0 0 42vh;
+    width: 100%;
+    flex: 1 1 50vh;
+    min-height: 35vh;
+    max-height: 70vh;
   }
 
   .playground {

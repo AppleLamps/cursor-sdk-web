@@ -7,6 +7,7 @@ import { AgentTrace } from "@/components/agent-trace";
 import styles from "./chat-panel.module.css";
 
 export interface ChatMessage {
+  id: string;
   role: "user" | "assistant";
   content: string;
   trace?: TraceStep[];
@@ -21,6 +22,8 @@ interface ChatPanelProps {
   onSubmit: (prompt: string) => void;
   onNewSite: () => void;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  messagesContainerRef?: React.RefObject<HTMLDivElement | null>;
+  onMessagesScroll?: () => void;
   showActivity?: boolean;
   onToggleActivity?: () => void;
   activityCount?: number;
@@ -35,6 +38,8 @@ export function ChatPanel({
   onSubmit,
   onNewSite,
   messagesEndRef,
+  messagesContainerRef,
+  onMessagesScroll,
   showActivity,
   onToggleActivity,
   activityCount = 0,
@@ -49,16 +54,31 @@ export function ChatPanel({
           <span className={styles.brandName}>Cursor SDK Web</span>
         </div>
         <div className={styles.topbarActions}>
-          <Link href="/onboarding" className={styles.iconBtn} title="API keys">
-            ⚙
+          <Link
+            href="/onboarding"
+            className={styles.iconBtn}
+            aria-label="API keys"
+            title="API keys"
+          >
+            <span aria-hidden>⚙</span>
           </Link>
-          <button type="button" className={styles.iconBtn} onClick={onNewSite} title="New site">
-            +
+          <button
+            type="button"
+            className={styles.iconBtn}
+            onClick={onNewSite}
+            aria-label="New site"
+            title="New site"
+          >
+            <span aria-hidden>+</span>
           </button>
         </div>
       </header>
 
-      <div className={styles.messages}>
+      <div
+        className={styles.messages}
+        ref={messagesContainerRef}
+        onScroll={onMessagesScroll}
+      >
         {messages.length === 0 && !showLiveTrace ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>What do you want to build?</p>
@@ -81,8 +101,8 @@ export function ChatPanel({
           </div>
         ) : (
           <>
-            {messages.map((message, index) => (
-              <div key={`${message.role}-${index}`} className={styles.messageBlock}>
+            {messages.map((message) => (
+              <div key={message.id} className={styles.messageBlock}>
                 {message.role === "assistant" && message.trace && message.trace.length > 0 ? (
                   <AgentTrace steps={message.trace} isLive={false} />
                 ) : null}
@@ -128,6 +148,7 @@ export function ChatPanel({
 
         <form
           className={styles.form}
+          aria-label="Send a chat message"
           onSubmit={(e) => {
             e.preventDefault();
             const form = e.currentTarget;
@@ -143,6 +164,7 @@ export function ChatPanel({
             name="prompt"
             rows={1}
             placeholder={isGenerating ? "Building…" : "Ask for changes…"}
+            aria-label="Chat message"
             disabled={isGenerating}
             autoComplete="off"
             onInput={(e) => {
@@ -161,6 +183,9 @@ export function ChatPanel({
             {isGenerating ? <span className={styles.spinner} /> : "↑"}
           </button>
         </form>
+        <p className={styles.inputHint}>
+          <kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for newline
+        </p>
       </footer>
     </div>
   );

@@ -107,9 +107,11 @@ export function PreviewFrame({
               type="button"
               className={widthMode === "desktop" ? styles.active : undefined}
               onClick={() => onWidthModeChange("desktop")}
+              aria-label="Desktop view"
+              aria-pressed={widthMode === "desktop"}
               title="Desktop"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="2" y="3" width="20" height="14" rx="2" />
                 <path d="M8 21h8M12 17v4" />
               </svg>
@@ -118,9 +120,11 @@ export function PreviewFrame({
               type="button"
               className={widthMode === "mobile" ? styles.active : undefined}
               onClick={() => onWidthModeChange("mobile")}
+              aria-label="Mobile view"
+              aria-pressed={widthMode === "mobile"}
               title="Mobile"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg aria-hidden width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="5" y="2" width="14" height="20" rx="2" />
                 <path d="M12 18h.01" />
               </svg>
@@ -157,9 +161,10 @@ export function PreviewFrame({
               className={styles.toolBtn}
               onClick={onRefresh}
               disabled={isLoading}
+              aria-label="Refresh preview"
               title="Refresh preview"
             >
-              ↻
+              <span aria-hidden>↻</span>
             </button>
           ) : null}
           {html ? (
@@ -168,17 +173,19 @@ export function PreviewFrame({
                 type="button"
                 className={styles.toolBtn}
                 onClick={handleOpenTab}
+                aria-label="Open preview in new tab"
                 title="Open in new tab"
               >
-                ↗
+                <span aria-hidden>↗</span>
               </button>
               <button
                 type="button"
                 className={styles.toolBtn}
                 onClick={handleFullscreen}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
                 title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
               >
-                {isFullscreen ? "⤡" : "⤢"}
+                <span aria-hidden>{isFullscreen ? "⤡" : "⤢"}</span>
               </button>
             </>
           ) : null}
@@ -187,9 +194,11 @@ export function PreviewFrame({
               type="button"
               className={`${styles.toolBtn} ${showDev ? styles.toolBtnActive : ""}`}
               onClick={onToggleDev}
+              aria-label="Toggle SDK info"
+              aria-pressed={showDev}
               title="SDK info"
             >
-              {"{}"}
+              <span aria-hidden>{"{}"}</span>
             </button>
           ) : null}
           <button
@@ -207,8 +216,9 @@ export function PreviewFrame({
             href="https://cursor.com/docs/sdk/typescript"
             target="_blank"
             rel="noreferrer"
+            aria-label="Cursor SDK documentation (opens in new tab)"
           >
-            SDK
+            SDK<span className={styles.externalMark} aria-hidden> ↗</span>
           </a>
         </div>
       </header>
