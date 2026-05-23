@@ -1,0 +1,65 @@
+.shell {
+  background: #151311;
+  color: #ece5da;
+  border-radius: var(--radius);
+  border: 1px solid #2d2924;
+  overflow: hidden;
+  min-height: 220px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid #2d2924;
+  font-size: 0.85rem;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.header span {
+  color: #9d9588;
+}
+
+.log {
+  padding: 12px 14px 16px;
+  max-height: 260px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.empty {
+  margin: 0;
+  color: #9d9588;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 72px 1fr;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.tagInfo,
+.tagStatus {
+  color: #8cb4ff;
+}
+
+.tagAssistant {
+  color: #f0c987;
+}
+
+.tagTool,
+.tagSuccess {
+  color: #89d7b0;
+}
+
+.tagError {
+  color: #ff8e7a;
+}

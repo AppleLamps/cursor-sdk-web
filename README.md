@@ -90,16 +90,14 @@ Before running locally or deploying:
 
 ## Project status
 
-This repo is under active development.
-
 | Phase | Status |
 |-------|--------|
-| Documentation | In progress |
-| Template repository | Planned |
-| Next.js app + API routes | Planned |
-| Chat UI + streaming | Planned |
-| Preview + export | Planned |
-| Vercel deployment | Planned |
+| Documentation | Done |
+| Template scaffold (`template/`) | Done — copy to GitHub |
+| Next.js app + API routes | Done |
+| Chat UI + streaming | Done |
+| Preview + export | Done |
+| Vercel deployment | Ready — add env vars and deploy |
 
 ---
 

@@ -1,0 +1,48 @@
+.shell {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  min-height: 220px;
+}
+
+.toggle {
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 999px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.body {
+  margin-top: 14px;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.metaList {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px;
+  font-size: 0.88rem;
+}
+
+.metaLabel {
+  color: var(--ink-muted);
+}
+
+.metaValue {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  word-break: break-all;
+}
